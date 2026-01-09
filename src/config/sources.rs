@@ -10,6 +10,7 @@ pub static SOURCES: Lazy<Vec<Source>> = Lazy::new(|| {
         Source::new("INTER-ECON", "The Economist", "https://www.economist.com/international/rss.xml", "INTER", "general").unwrap(),
         Source::new("INTER-DW", "Deutsche Welle", "https://rss.dw.com/rdf/rss-en-all", "INTER", "general").unwrap(),
         Source::new("INTER-BLOOM", "Bloomberg", "https://feeds.bloomberg.com/markets/news.rss", "INTER", "business").unwrap(),
+        Source::new("FR-F24", "France 24", "https://www.france24.com/en/rss", "FR", "general").unwrap(),
         // US
         Source::new("US-CNN", "CNN", "https://rss.cnn.com/rss/cnn_topstories.rss", "US", "general").unwrap(),
         Source::new("US-NYT", "New York Times", "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml", "US", "general").unwrap(),
