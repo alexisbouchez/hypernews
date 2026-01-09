@@ -1,7 +1,11 @@
-use axum::{extract::Query, Json};
+use axum::{
+    extract::{Query, State},
+    Json,
+};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use super::ws::AppState;
 use crate::config::*;
 use crate::error::ApiError;
 use crate::models::{Article, Source};
@@ -66,4 +70,56 @@ pub async fn get_sources(Query(params): Query<SourcesQuery>) -> Json<Value> {
 pub struct SourcesQuery {
     pub country: Option<String>,
     pub topic: Option<String>,
+}
+
+/// Fetch news from all sources and broadcast to WebSocket clients
+pub async fn fetch_and_broadcast(
+    State(state): State<AppState>,
+    Query(params): Query<NewsQuery>,
+) -> Result<Json<Value>, ApiError> {
+    let sources: Vec<&Source> = if let Some(ref topic) = params.topic {
+        let s = find_sources_by_category(topic);
+        if s.is_empty() {
+            return Err(ApiError::BadRequest("No sources for topic".into()));
+        }
+        s
+    } else if let Some(ref country) = params.country {
+        let s = find_sources_by_country(country);
+        if s.is_empty() {
+            return Err(ApiError::BadRequest("No sources for country".into()));
+        }
+        s
+    } else {
+        // Fetch from all sources
+        get_all_sources().iter().collect()
+    };
+
+    let mut articles = Vec::new();
+    let mut broadcast_count = 0;
+
+    for source in sources {
+        if let Ok(content) = fetch_rss(&source.url).await {
+            if let Ok(parsed) = parse_feed(&content, &source.name) {
+                for article in &parsed {
+                    // Broadcast each article to WebSocket clients
+                    if state.tx.send(article.clone()).is_ok() {
+                        broadcast_count += 1;
+                    }
+                }
+                articles.extend(parsed);
+            }
+        }
+    }
+
+    let articles: Vec<Article> = if let Some(ref kw) = params.keyword {
+        filter_by_keyword(&articles, kw)
+    } else {
+        articles
+    };
+
+    Ok(Json(json!({
+        "status": "success",
+        "fetched": articles.len(),
+        "broadcast": broadcast_count
+    })))
 }
