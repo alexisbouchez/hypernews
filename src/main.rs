@@ -46,8 +46,10 @@ async fn main() {
         .layer(cors)
         .layer(TraceLayer::new_for_http());
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    tracing::info!("Server running on http://localhost:3000");
-    tracing::info!("WebSocket available at ws://localhost:3000/ws");
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3004".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    tracing::info!("Server running on http://localhost:{}", port);
+    tracing::info!("WebSocket available at ws://localhost:{}/ws", port);
     axum::serve(listener, app).await.unwrap();
 }
